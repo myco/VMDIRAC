@@ -2,10 +2,12 @@
 
 import commands
 import os
-import simplejson
 import time
 import urllib2
 import types
+
+try: import simplejson as json
+except ImportError: import json
 
 try:
   from hashlib import md5
@@ -67,7 +69,7 @@ class VirtualMachineMonitorAgent( AgentModule ):
     try:
       request  = urllib2.Request( metadataUrl )
       jsonFile = opener.open( request )
-      jsonDict = simplejson.load( jsonFile )
+      jsonDict = json.load( jsonFile )
  
       return S_OK( jsonDict[ 'uuid' ] )
         
