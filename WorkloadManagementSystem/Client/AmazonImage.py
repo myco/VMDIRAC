@@ -29,6 +29,7 @@ class AmazonImage:
     
     self.__vmImage     = False
     self.__instances   = []
+    self.__vmMaxAllowedPrice = 0.0
     self.__errorStatus = ""
     #Get CloudEndpoint free slot on submission time
     self.__endpoint    = endpoint
@@ -102,9 +103,9 @@ class AmazonImage:
     return gConfig.getValue( "/Resources/VirtualMachines/CloudEndpoints/%s/%s" % ( self.__endpoint, option ), defValue )
 
   def __getMaxAllowedPrice( self, imageName):
-    price = self.__getCSImageOption( imageName, "MaxAllowedPrice", 0.0 )
-    if price:
-      return price
+    self.__vmMaxAllowedPrice = self.__getCSImageOption( imageName, "MaxAllowedPrice", 0.0 )
+    if self.__vmMaxAllowedPrice:
+      return self.__vmMaxAllowedPrice
     else:
       return False
 
@@ -225,8 +226,20 @@ class AmazonImage:
                                                                         imageAMI,
                                                                         instanceType ) )
     try:
-      spotInstanceRequests = self.__conn.request_spot_instances( price = "%f" % self.__vmMaxAllowedPrice,
+      self.imageConfig = ImageConfiguration( imageName ).config()
+      if self.imageConfig[ 'contextMethod' ] == 'cloudinit':
+        security_groups = self.imageConfig[ 'contextConfig' ].get( 'ex_security_groups' , 'default' ).replace(',',' ').split()
+        keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
+        userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
+        userData = ""
+        with open( userDataPath, 'r' ) as userDataFile: 
+          userData = ''.join( userDataFile.readlines() )
+      else:
+        spotInstanceRequests = self.__conn.request_spot_instances( price = "%f" % self.__vmMaxAllowedPrice,
                                                         image_id = imageAMI,
+                                                        user_data = userData,
+                                                        key_name = keyname,
+                                                        security_groups = security_groups,
                                                         count = numImages,
                                                         instance_type = instanceType )
       self.log.verbose( "Got %d spot instance requests" % len( spotInstanceRequests ) )
