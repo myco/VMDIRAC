@@ -222,6 +222,7 @@ class AmazonImage:
 # TO DO: fix checking price
   def __startSpotInstances( self, imageName, numImages, instanceType, waitForConfirmation ):
     imageAMI = self.__getAMI(imageName)
+    idList = []
     self.log.info( "Starting %d new spot instances for AMI %s (type %s)" % ( numImages,
                                                                         imageAMI,
                                                                         instanceType ) )
@@ -234,7 +235,6 @@ class AmazonImage:
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )
-      else:
         spotInstanceRequests = self.__conn.request_spot_instances( price = "%f" % self.__vmMaxAllowedPrice,
                                                         image_id = imageAMI,
                                                         user_data = userData,
@@ -242,30 +242,27 @@ class AmazonImage:
                                                         security_groups = security_groups,
                                                         count = numImages,
                                                         instance_type = instanceType )
-      self.log.verbose( "Got %d spot instance requests" % len( spotInstanceRequests ) )
+        self.log.verbose( "Got %d spot instance requests" % len( spotInstanceRequests ) )
+        openSIRs = spotInstanceRequests
+        sirIDToCheck = [ sir.id for sir in openSIRs ]
+        invalidSIRs = []
+        while sirIDToCheck:
+          time.sleep( 10 )
+          self.log.verbose( "Refreshing SIRS %s" % ", ".join( sirIDToCheck ) )
+          openSIRs = self.__conn.get_all_spot_instance_requests( sirIDToCheck )
+          sirIDToCheck = []
+          while openSIRs:
+            sir = openSIRs.pop()
+            self.log.verbose( "SIR %s is in state %s" % ( sir.id, sir.state ) )
+            if sir.state == u'active' and 'instance_id' in dir( sir ):
+              self.log.verbose( "SIR %s has instance %s" % ( sir.id, sir.instance_id ) )
+              idList.append( sir.instance_id )
+            elif sir.state == u'closed':
+              invalidSIRs.append( sir.id )
+            else:
+              sirIDToCheck.append( sir.id )
     except Exception, e:
       return S_ERROR( "Could not start spot instances: %s" % str( e ) )
-
-    idList = []
-    openSIRs = spotInstanceRequests
-    sirIDToCheck = [ sir.id for sir in openSIRs ]
-    invalidSIRs = []
-    while sirIDToCheck:
-      time.sleep( 10 )
-      self.log.verbose( "Refreshing SIRS %s" % ", ".join( sirIDToCheck ) )
-      openSIRs = self.__conn.get_all_spot_instance_requests( sirIDToCheck )
-      sirIDToCheck = []
-      while openSIRs:
-        sir = openSIRs.pop()
-        self.log.verbose( "SIR %s is in state %s" % ( sir.id, sir.state ) )
-        if sir.state == u'active' and 'instance_id' in dir( sir ):
-          self.log.verbose( "SIR %s has instance %s" % ( sir.id, sir.instance_id ) )
-          idList.append( sir.instance_id )
-        elif sir.state == u'closed':
-          invalidSIRs.append( sir.id )
-        else:
-          sirIDToCheck.append( sir.id )
-
     if idList:
       return S_OK( idList )
     return S_ERROR( "Could not start any spot instance. Failed SIRs : %s" % ", ".join( invalidSIRs ) )
