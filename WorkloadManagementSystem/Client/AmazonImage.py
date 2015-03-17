@@ -242,9 +242,9 @@ class AmazonImage:
                                                         security_groups = security_groups,
                                                         count = numImages,
                                                         instance_type = instanceType )
-        self.log.verbose( "Got %d spot instance requests" % len( spotInstanceRequests ) )
         openSIRs = spotInstanceRequests
         sirIDToCheck = [ sir.id for sir in openSIRs ]
+        self.log.verbose( "Got %s spot instance requests for price %s" % (sirIDToCheck, self.__vmMaxAllowedPrice) )
         invalidSIRs = []
         while sirIDToCheck:
           time.sleep( 10 )
