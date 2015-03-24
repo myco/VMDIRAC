@@ -186,6 +186,7 @@ class AmazonImage:
         security_groups = self.imageConfig[ 'contextConfig' ].get( 'ex_security_groups' , 'default' ).replace(',',' ').split()
         keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
         userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
+        defaultZone = self.imageConfig[ 'defaultZone' ]
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )
@@ -193,6 +194,7 @@ class AmazonImage:
                                         max_count = numImages,
                                         user_data = userData,
                                         key_name = keyname,
+                                        location = defaultZone,
                                         security_groups = security_groups,
                                         instance_type = instanceType )
       else:
@@ -219,7 +221,6 @@ class AmazonImage:
     return S_OK( idList )
 
 
-# TO DO: fix checking price
   def __startSpotInstances( self, imageName, numImages, instanceType, waitForConfirmation ):
     imageAMI = self.__getAMI(imageName)
     idList = []
@@ -232,6 +233,7 @@ class AmazonImage:
         security_groups = self.imageConfig[ 'contextConfig' ].get( 'ex_security_groups' , 'default' ).replace(',',' ').split()
         keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
         userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
+        defaultZone = self.imageConfig[ 'defaultZone' ]
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )
@@ -239,6 +241,7 @@ class AmazonImage:
                                                         image_id = imageAMI,
                                                         user_data = userData,
                                                         key_name = keyname,
+                                                        location = defaultZone,
                                                         security_groups = security_groups,
                                                         count = numImages,
                                                         instance_type = instanceType )
@@ -308,7 +311,7 @@ class AmazonImage:
     return instances
 
   def isConnected( self ):
-    if not self.__conn.get_all_images():
+    if not self.__conn.get_all_images(owners=['self']):
       return False
     return True
 
