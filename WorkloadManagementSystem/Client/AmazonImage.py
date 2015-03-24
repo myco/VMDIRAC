@@ -234,7 +234,9 @@ class AmazonImage:
         security_groups = self.imageConfig[ 'contextConfig' ].get( 'ex_security_groups' , 'default' ).replace(',',' ').split()
         keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
         userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
-        defaultZone = self.imageConfig[ 'defaultZone' ]
+        defaultZone = None
+        if 'defaultZone' in self.imageConfig:
+          defaultZone = self.imageConfig[ 'defaultZone' ]
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )
@@ -246,6 +248,7 @@ class AmazonImage:
                                                         security_groups = security_groups,
                                                         count = numImages,
                                                         instance_type = instanceType )
+        self.log.verbose("Spot request params: %s %s %s %s %s" % (self.__vmMaxAllowedPrice, imageAMI, defaultZone, security_groups, instanceType ))
         openSIRs = spotInstanceRequests
         sirIDToCheck = [ sir.id for sir in openSIRs ]
         self.log.verbose( "Got %s spot instance requests for price %s" % (sirIDToCheck, self.__vmMaxAllowedPrice) )
