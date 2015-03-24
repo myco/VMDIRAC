@@ -171,9 +171,13 @@ class AmazonImage:
         return S_ERROR( errmsg+e.body)
     try:
       self.imageConfig = ImageConfiguration( imageName ).config()
+      keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
+      userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
+      security_groups = self.imageConfig[ 'contextConfig' ].get( 'ex_security_groups' , 'default' ).replace(',',' ').split()
+      defaultZone = None
+      if 'defaultZone' in self.imageConfig:
+        defaultZone = self.imageConfig[ 'defaultZone' ]
       if self.imageConfig[ 'contextMethod' ] == 'amiconfig':
-        userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
-        keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )
@@ -181,12 +185,9 @@ class AmazonImage:
                                         max_count = numImages,
                                         user_data = userData,
                                         key_name = keyname,
+                                        security_groups = security_groups,
                                         instance_type = instanceType )
       elif self.imageConfig[ 'contextMethod' ] == 'cloudinit':
-        security_groups = self.imageConfig[ 'contextConfig' ].get( 'ex_security_groups' , 'default' ).replace(',',' ').split()
-        keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
-        userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
-        defaultZone = self.imageConfig[ 'defaultZone' ]
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )
@@ -194,7 +195,7 @@ class AmazonImage:
                                         max_count = numImages,
                                         user_data = userData,
                                         key_name = keyname,
-                                        location = defaultZone,
+                                        placement = defaultZone,
                                         security_groups = security_groups,
                                         instance_type = instanceType )
       else:
@@ -241,7 +242,7 @@ class AmazonImage:
                                                         image_id = imageAMI,
                                                         user_data = userData,
                                                         key_name = keyname,
-                                                        location = defaultZone,
+                                                        placement = defaultZone,
                                                         security_groups = security_groups,
                                                         count = numImages,
                                                         instance_type = instanceType )
