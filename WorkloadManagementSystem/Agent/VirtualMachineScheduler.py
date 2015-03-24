@@ -272,16 +272,14 @@ class VirtualMachineScheduler( AgentModule ):
 
     for directorName, imageOfJobsToSubmitDict in imagesToSubmit.items():
       for imageName, jobsToSubmitDict in imageOfJobsToSubmitDict.items():
+        endpoint = jobsToSubmitDict['CloudEndpoint']
+        runningPodName = jobsToSubmitDict['RunningPodName']
+        numVMs = jobsToSubmitDict['NumVMsToSubmit']
         if self.directors[directorName]['isEnabled'] and numVMs > 0 and self.__isConnectionToEndpoint(endpoint):
           self.log.info( 'Requesting submission of %s to %s' % ( imageName, directorName ) )
 
           director = self.directors[directorName]['director']
           pool = self.pools[self.directors[directorName]['pool']]
-
-          endpoint = jobsToSubmitDict['CloudEndpoint']
-          runningPodName = jobsToSubmitDict['RunningPodName']
-          numVMs = jobsToSubmitDict['NumVMsToSubmit']
-
           ret = pool.generateJobAndQueueIt( director.submitInstance,
                                             args = ( imageName, endpoint, numVMs, runningPodName ),
                                             oCallback = self.callBack,
