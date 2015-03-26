@@ -234,9 +234,7 @@ class AmazonImage:
         security_groups = self.imageConfig[ 'contextConfig' ].get( 'ex_security_groups' , 'default' ).replace(',',' ').split()
         keyname  = self.imageConfig[ 'contextConfig' ].get( 'ex_keyname' , None )
         userDataPath = self.imageConfig[ 'contextConfig' ].get( 'ex_userdata', None )
-        defaultZone = None
-        if 'defaultZone' in self.imageConfig:
-          defaultZone = self.imageConfig[ 'defaultZone' ]
+        defaultZone = gConfig.getValue( "/Resources/VirtualMachines/Images/%s/%s" % ( imageName, 'defaultZone' ), None )
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )

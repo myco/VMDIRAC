@@ -368,7 +368,8 @@ class VirtualMachineScheduler( AgentModule ):
     if driver == 'Amazon':
       from VMDIRAC.WorkloadManagementSystem.Client.AmazonImage  import AmazonImage
       inst = AmazonImage( endpoint )
-      return inst.isConnected()
+      if inst.isConnected(): return True
+      else: return False
     return True
 
   def __checkSubmitPools( self ):
