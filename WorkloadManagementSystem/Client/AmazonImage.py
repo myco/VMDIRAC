@@ -6,6 +6,7 @@ from boto.exception import EC2ResponseError
 import time
 import types
 from urlparse import urlparse
+import re
 
 # DIRAC
 from DIRAC import gLogger, gConfig, S_OK, S_ERROR
@@ -238,14 +239,33 @@ class AmazonImage:
         userData = ""
         with open( userDataPath, 'r' ) as userDataFile: 
           userData = ''.join( userDataFile.readlines() )
-        spotInstanceRequests = self.__conn.request_spot_instances( price = "%f" % self.__vmMaxAllowedPrice,
-                                                        image_id = imageAMI,
-                                                        user_data = userData,
-                                                        key_name = keyname,
-                                                        placement = defaultZone,
-                                                        security_groups = security_groups,
-                                                        count = numImages,
-                                                        instance_type = instanceType )
+
+        reqParams = {
+          'price':"%f" % self.__vmMaxAllowedPrice,
+          'image_id' : imageAMI,
+          'user_data' : userData,
+          'key_name' : keyname,
+          'placement' : defaultZone,
+          'security_groups' : security_groups,
+          'count' : numImages,
+          'instance_type' : instanceType
+        }
+        try:
+          spotInstanceRequests = self.__conn.request_spot_instances(**reqParams)
+        except EC2ResponseError, e:
+          if re.search(r'No default subnet for availability zone', e.body):
+            errmsg = e.body + "\n   Using subnet_id param instead of security_groups to lunch this instance. Be sure that ex_security_groups is security group ID (not name) in this case."
+            subnetForZone = gConfig.getValue( "/Resources/VirtualMachines/Images/%s/%s" % ( imageName, 'subnetForZone' ), None )
+            if not subnetForZone: return S_ERROR('Please set the subnetForZone param in the config')
+            reqParams.pop('security_groups',None)
+            reqParams['subnet_id'] = subnetForZone
+            spotInstanceRequests = self.__conn.request_spot_instances(**reqParams)
+            self.log.info( errmsg )
+          else:
+            errmsg = "Boto exception: "
+            self.log.error( errmsg )
+            return S_ERROR( errmsg+e.body)
+
         self.log.verbose("Spot request params: %s %s %s %s %s" % (self.__vmMaxAllowedPrice, imageAMI, defaultZone, security_groups, instanceType ))
         openSIRs = spotInstanceRequests
         sirIDToCheck = [ sir.id for sir in openSIRs ]
